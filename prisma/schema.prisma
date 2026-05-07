@@ -1,0 +1,95 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Usuario {
+  id           Int       @id @default(autoincrement())
+  nombre       String    @db.VarChar(100)
+  email        String    @unique @db.VarChar(150)
+  passwordHash String    @map("password_hash") @db.VarChar(255)
+  rol          String    @default("usuario") @db.VarChar(20)
+  activo       Boolean?  @default(true)
+  createdAt    DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  favoritos    Favorito[]
+
+  @@map("usuarios")
+}
+
+model Director {
+  id           Int        @id @default(autoincrement())
+  nombre       String     @db.VarChar(100)
+  nacionalidad String?    @db.VarChar(50)
+  fecha_nac    DateTime?  @db.Date
+  peliculas    Pelicula[]
+
+  @@map("directores")
+}
+
+model Genero {
+  id        Int        @id @default(autoincrement())
+  nombre    String     @unique @db.VarChar(50)
+  slug      String     @unique @db.VarChar(50)
+  peliculas Pelicula[]
+
+  @@map("generos")
+}
+
+model Pelicula {
+  id         Int       @id @default(autoincrement())
+  titulo     String    @db.VarChar(255)
+  anio       Int
+  nota       Decimal?  @db.Decimal(3, 1)
+  directorId Int?      @map("director_id")
+  generoId   Int?      @map("genero_id")
+  destacada  Boolean   @default(false)
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  director   Director? @relation(fields: [directorId], references: [id], onUpdate: NoAction)
+  genero     Genero?   @relation(fields: [generoId], references: [id], onUpdate: NoAction)
+  resenas    Resena[]
+  favoritos  Favorito[]
+
+  @@index([directorId], map: "idx_peliculas_director")
+  @@index([generoId], map: "idx_peliculas_genero")
+  @@map("peliculas")
+}
+
+model Resena {
+  id         Int       @id @default(autoincrement())
+  peliculaId Int       @map("pelicula_id")
+  autor      String    @db.VarChar(100)
+  texto      String
+  puntuacion Int
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+  pelicula   Pelicula  @relation(fields: [peliculaId], references: [id], onDelete: Cascade, onUpdate: NoAction)
+
+  @@index([peliculaId], map: "idx_resenas_pelicula")
+  @@map("resenas")
+}
+
+model Favorito {
+  id         Int      @id @default(autoincrement())
+  usuarioId  Int      @map("usuario_id")
+  peliculaId Int      @map("pelicula_id")
+  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamptz(6)
+
+  usuario    Usuario  @relation(fields: [usuarioId], references: [id], onDelete: Cascade)
+  pelicula   Pelicula @relation(fields: [peliculaId], references: [id], onDelete: Cascade)
+
+  @@unique([usuarioId, peliculaId])
+  @@map("favoritos")
+}
+
+model auditoria_peliculas {
+  id            Int       @id @default(autoincrement())
+  pelicula_id   Int?
+  operacion     String    @db.VarChar(10)
+  datos_antes   Json?
+  datos_despues Json?
+  usuario_db    String?   @default(dbgenerated("CURRENT_USER")) @db.VarChar(100)
+  fecha         DateTime? @default(now()) @db.Timestamptz(6)
+}

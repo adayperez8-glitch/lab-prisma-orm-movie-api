@@ -1,0 +1,49 @@
+{
+  "name": "lab-prisma-orm-movie-api",
+  "version": "1.0.0",
+  "description": "Lab: Migrar API de películas a Prisma ORM",
+  "main": "index.js",
+  "scripts": {
+    "start": "node index.js",
+    "dev": "nodemon index.js",
+    "test": "cross-env NODE_ENV=test jest --runInBand",
+    "test:watch": "cross-env NODE_ENV=test jest --watch --runInBand",
+    "test:coverage": "cross-env NODE_ENV=test jest --coverage --runInBand",
+    "prisma:seed": "node prisma/seed.js"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/adayperez8-glitch/lab-prisma-orm-movie-api.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "bugs": {
+    "url": "https://github.com/adayperez8-glitch/lab-prisma-orm-movie-api/issues"
+  },
+  "homepage": "https://github.com/adayperez8-glitch/lab-prisma-orm-movie-api#readme",
+  "dependencies": {
+    "bcrypt": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "@prisma/client": "^5.22.0",
+    "cross-env": "^10.1.0",
+    "jest": "^30.3.0",
+    "nodemon": "^3.1.14",
+    "prisma": "^5.22.0",
+    "supertest": "^7.2.2"
+  },
+  "jest": {
+    "testEnvironment": "node",
+    "testMatch": [
+      "**/__tests__/**/*.test.js"
+    ],
+    "setupFilesAfterEnv": [
+      "./src/__tests__/setup.js"
+    ]
+  }
+}
