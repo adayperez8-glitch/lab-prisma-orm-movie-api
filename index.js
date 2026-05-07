@@ -6,54 +6,26 @@ const app = express()
 
 app.use(express.json())
 
-const peliculaRoutes = require('./src/routes/peliculaRoutes')
-const authRouter = require('./src/routes/auth')
 const favoritosRouter = require('./src/routes/favoritos')
+const directoresRouter = require('./src/routes/directores')
+const peliculasRouter = require('./src/routes/peliculas')
+const auditoria = require('./src/middleware/auditoria')
+const authRouter = require('./src/routes/auth')
+const estadisticasRouter = require('./src/routes/estadisticas')
 
 app.use('/api/auth', authRouter)
-app.use('/api/peliculas', peliculaRoutes)
+app.use('/api/directores', directoresRouter)
+app.use('/api/peliculas', auditoria, peliculasRouter)
+app.use('/api/estadisticas', estadisticasRouter)
 app.use('/api/favoritos', favoritosRouter)
 
-app.get('/api/estadisticas', async (req, res, next) => {
-  try {
-    const prisma = require('./src/config/prisma')
-    const [stats, porGenero] = await prisma.$transaction([
-      prisma.$queryRaw`
-        SELECT
-          COUNT(*)::int AS total,
-          ROUND(AVG(nota)::numeric, 2) AS media_nota,
-          MAX(nota) AS nota_maxima,
-          MIN(nota) AS nota_minima
-        FROM peliculas
-        WHERE nota IS NOT NULL
-      `,
-      prisma.genero.findMany({
-        select: {
-          nombre: true,
-          _count: { select: { peliculas: true } }
-        },
-        orderBy: { peliculas: { _count: 'desc' } }
-      })
-    ])
-
-    res.json({
-      total: stats[0].total,
-      media_nota: stats[0].media_nota,
-      nota_maxima: stats[0].nota_maxima,
-      nota_minima: stats[0].nota_minima,
-      porGenero: porGenero.map(g => ({
-        genero: g.nombre,
-        cantidad: g._count.peliculas
-      }))
-    })
-  } catch (err) {
-    next(err)
-  }
+app.use((err, req, res, next) => {
+  const status = err.status || 500
+  res.status(status).json({ error: err.message })
 })
 
-app.use((err, req, res, next) => {
-  const status = err.statusCode || 500
-  res.status(status).json({ error: err.message })
+app.use((req, res) => {
+  res.status(404).json({ error: `${req.method} ${req.url} no encontrada` })
 })
 
 const PORT = process.env.PORT || 3000

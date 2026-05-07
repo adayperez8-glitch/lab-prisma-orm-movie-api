@@ -5,8 +5,8 @@ const { añadirFavorito, quitarFavorito, listarFavoritos } = require('../control
 
 router.use(verificarToken)
 
-router.post('/:peliculaId', añadirFavorito)
-router.delete('/:peliculaId', quitarFavorito)
+router.post('/', añadirFavorito)
+router.delete('/', quitarFavorito)
 router.get('/', listarFavoritos)
 
 module.exports = router

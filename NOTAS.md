@@ -1,27 +1,31 @@
+# Notas del Lab — Prisma ORM
 
-¿Cuándo es contraproducente crear un índice? (pista: piensa en tablas con muchas escrituras)
+## Parte 2 — Reflexión
 
-Crear un índice es contraproducente principalmente en tablas con un alto volumen de escrituras (INSERT, UPDATE, DELETE). Esto sucede porque cada vez que modifico un dato, la base de datos no solo tiene que escribir en la tabla, sino también actualizar todos los índices asociados, lo que penaliza el rendimiento.
+### 1. ¿Qué ventajas concretas ofrece Prisma frente a escribir SQL en crudo en este proyecto? Da al menos dos ejemplos específicos.
 
-También evito indexar columnas con baja cardinalidad (como un booleano de true/false), ya que el motor de búsqueda probablemente decida que es más rápido leer toda la tabla que consultar el índice. En resumen, si la tabla es muy pequeña o cambia constantemente, el índice estorba más de lo que ayuda.
+. Ventajas de Prisma sobre SQL Nativo
+Prisma actúa como un traductor inteligente que simplifica la interacción con la base de datos de dos formas clave:
 
+Seguridad y legibilidad en los filtros: En lugar de pelear con la sintaxis de SQL y el manejo manual de variables (como los típicos $1, $2 que se vuelven un caos en consultas largas), Prisma usa objetos de JavaScript. Por ejemplo, para buscar películas por género, solo pasas un objeto { where: { genero: 'Acción' } }. Esto hace que el código sea mucho más fácil de leer y casi imposible de romper por un error de tipeo.
 
-¿Qué diferencia hay entre RANK() y DENSE_RANK()? Pon un ejemplo con los datos de la base de datos.
+Relaciones sin dolor (Adiós a los JOINs manuales): En SQL, traer datos de tablas relacionadas requiere escribir sentencias JOIN complejas y luego "limpiar" el resultado. Con Prisma, usas la instrucción include. Si quieres una película con su director, simplemente pones include: { director: true } y Prisma se encarga de estructurar el JSON resultante de forma automática.
 
-Ambas funciones me sirven para asignar un ranking, pero la diferencia está en cómo manejan los empates:
+### 2. ¿Qué hace `prisma.$transaction([query1, query2])`? ¿En qué se diferencia de `prisma.$transaction(async (tx) => { ... })`?
 
-RANK(): Si hay dos elementos en la misma posición, el siguiente puesto se "salta". Por ejemplo, si hay un empate en el 2º lugar, el que sigue será el 4º.
+Ambos métodos garantizan que todas las operaciones se completen con éxito o que ninguna se aplique (evitando datos corruptos), pero su flujo es diferente:
 
-DENSE_RANK(): No deja huecos. Si hay un empate en el 2º lugar, el que sigue será el 3º, de forma "densa".
+El Array [$query1, $query2]: Se usa para "paquetes" de tareas simples. Es como enviar una lista de mandados: le das todas las instrucciones a Prisma de un solo golpe. Se utiliza cuando las consultas son independientes entre sí y no necesitas el resultado de la primera para ejecutar la segunda.
 
-¿Por qué el trigger usa AFTER INSERT OR UPDATE OR DELETE en lugar de BEFORE?
+El Callback async (tx) => { ... }: Se usa para procesos con lógica intermedia. Aquí puedes realizar pasos "interactivos". Por ejemplo: primero creas un usuario, recuperas su ID generado automáticamente, y usas ese ID para crear un perfil. Si el perfil falla, Prisma detecta el error y deshace también la creación del usuario.
+### 3. ¿Qué archivo NO deberías commitear nunca al repositorio de tu schema de Prisma? ¿Y cuáles sí deben estar en el repositorio?
 
-He decidido usar AFTER (ya sea INSERT, UPDATE o DELETE) porque en este flujo me interesa actuar una vez que la operación ya ha sido validada y confirmada en la base de datos.
+Para mantener el proyecto seguro y organizado, hay reglas estrictas sobre qué compartir:
 
-Las razones principales son:
+PROHIBIDO commitear: El archivo .env. Este archivo es privado porque guarda la DATABASE_URL, la cual incluye el usuario y la contraseña real de tu base de datos. Si lo subes a GitHub, cualquiera podría entrar a borrar o robar tu información.
 
-Integridad: Me aseguro de que el trigger solo se ejecute si la operación principal cumplió con todos los constraints (como llaves foráneas).
+OBLIGATORIO commitear:
 
-Acceso a datos generados: Si necesito el id autoincremental de un nuevo registro para guardarlo en otra tabla (como un log de auditoría), ese ID solo está disponible después del insert.
+schema.prisma: Es el plano arquitectónico de tu base de datos; sin él, el proyecto no sabe cómo generar el cliente de Prisma.
 
-Lógica de reacción: Como la intención es reaccionar a un cambio y no modificar los datos que están entrando (que es para lo que usaría un BEFORE), el AFTER es el evento correcto para mantener la consistencia.
+La carpeta migrations/: Es el historial de cambios. Permite que cualquier otro desarrollador (o tú mismo en el futuro) pueda reconstruir la base de datos desde cero exactamente como la dejaste.
